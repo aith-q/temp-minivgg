@@ -11,7 +11,7 @@ from torchvision import transforms, utils
 import time
 from pathlib import Path
 from tqdm import tqdm
-
+from math import *
 
 threads = 4
 
@@ -110,20 +110,27 @@ augmentation_transform = transforms.Compose([
 
 dataset = gz2Dataset(csv_filename, img_dir, augmentation_transform)
 
+plt.ion()
+
 fig = plt.figure()
 
-for i in range(len(dataset)):
-    sample = dataset[i]
+def show_some(n):
 
-    print(sample)
+    plt.clf()
 
-    ax = plt.subplot(4, 4, i + 1)
-    plt.tight_layout()
-    ax.set_title('Sample #{}'.format(i))
-    ax.axis('off')
-    plt.imshow(sample['image'])
+    k = int(sqrt(n))
 
-    if i == 15:
-        plt.show()
-        break
+    dataloader = DataLoader(dataset, batch_size=None)
+
+    for i, sample in tqdm(enumerate(dataloader), total=n, unit=''):
+        if (i == n): break
+
+        ax = plt.subplot((n+k-1) // k, k, i + 1)
+        plt.tight_layout()
+        ax.set_title('Sample {}'.format(i))
+        ax.axis('off')
+        plt.imshow(sample['image'])
+    plt.show()
+
+show_some(16)
 
