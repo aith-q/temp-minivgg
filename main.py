@@ -33,7 +33,6 @@ class gz2Dataset(Dataset):
         t0 = time.time()
         self.values = pd.read_csv(csv_file, usecols=default_columns)
         print ('Loading took {:.2f}s'.format(time.time() - t0))
-        print(self.values.columns)
 
         self.img_dir = img_dir
         self.transform = transform
@@ -48,8 +47,6 @@ class gz2Dataset(Dataset):
 
         print ('Fixing took {:.2f}s'.format(time.time() - t0))
 
-        print(self.values)
-
 
     def __len__(self):
         return len(self.values)
@@ -63,16 +60,12 @@ class gz2Dataset(Dataset):
         image = io.imread(img_name)
         if self.transform:
             image = self.transform(image)
-        # landmarks = self.landmarks_frame.iloc[idx, 1:]
-        # landmarks = np.array([landmarks])
-        # landmarks = landmarks.astype('float').reshape(-1, 2)
 
         sample = {'image': image}
 
         return sample
 
 csv_filename = 'data/gz2/gz2_classifications_and_subjects.csv'
-# csv_filename = 'data/gz2/gz2_classifications_and_subjects.tar.gz'
 raw_img_dir = 'data/gz2/gz2/png'
 img_dir = 'data/gz2/gz2/final'
 
@@ -81,25 +74,30 @@ img_dir = 'data/gz2/gz2/final'
 def preprocess(input_dir, output_dir, transform):
     assert(output_dir != input_dir)
 
+    flag_file = Path(output_dir) / 'done'
+
+    if flag_file.exists():
+        return
+
     dataset = gz2Dataset(csv_filename, input_dir, transform)
 
     output_paths = dataset.values['png_loc'].str.slice_replace(stop=len(input_dir), repl = output_dir)
     dataloader = DataLoader(dataset, batch_size=None, shuffle=False, num_workers=threads)
-    for i, sample in tqdm(enumerate(dataloader), total=len(dataloader), unit=' images'):
+    for i, sample in tqdm(enumerate(dataloader), desc='Preprocessing images', total=len(dataloader), unit=' images'):
         path = output_paths.iloc[i]
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         io.imsave(path, np.array(sample['image']))
+    flag_file.open('a+b').close()
 
-if False:
-    preprocess(
-        raw_img_dir,
-        img_dir,
-        transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.Resize((256, 256)),
-            transforms.Grayscale(),
-        ])
-    )
+preprocess(
+    raw_img_dir,
+    img_dir,
+    transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.Resize((256, 256)),
+        transforms.Grayscale(),
+    ])
+)
 
 augmentation_transform = transforms.Compose([
     transforms.ToPILImage('L'),
