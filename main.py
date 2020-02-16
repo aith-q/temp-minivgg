@@ -78,12 +78,12 @@ img_dir = 'data/gz2/gz2/final'
 
 
 # a bit kludgy
-def preprocess(output_dir, transform):
-    assert(output_dir != raw_img_dir)
+def preprocess(input_dir, output_dir, transform):
+    assert(output_dir != input_dir)
 
-    dataset = gz2Dataset(csv_filename, raw_img_dir, transform)
+    dataset = gz2Dataset(csv_filename, input_dir, transform)
 
-    output_paths = dataset.values['png_loc'].str.slice_replace(stop=len(img_dir), repl = output_dir)
+    output_paths = dataset.values['png_loc'].str.slice_replace(stop=len(input_dir), repl = output_dir)
     dataloader = DataLoader(dataset, batch_size=None, shuffle=False, num_workers=threads)
     for i, sample in tqdm(enumerate(dataloader), total=len(dataloader), unit=' images'):
         path = output_paths.iloc[i]
@@ -92,7 +92,8 @@ def preprocess(output_dir, transform):
 
 if False:
     preprocess(
-        'data/gz2/gz2/final',
+        raw_img_dir,
+        img_dir,
         transforms.Compose([
             transforms.ToPILImage(),
             transforms.Resize((256, 256)),
@@ -100,16 +101,23 @@ if False:
         ])
     )
 
+augmentation_transform = transforms.Compose([
+    transforms.ToPILImage('L'),
+    transforms.RandomHorizontalFlip(),
+    transforms.RandomVerticalFlip(),
+    transforms.RandomRotation(90.0, fill=(0,)), # bug in library necessitates (0,)
+    transforms.ColorJitter(contrast=0.02),
+    transforms.RandomResizedCrop((128, 128), scale=(0.75, 0.9), ratio=(1, 1)),
+])
 
-
-dataset = gz2Dataset(csv_filename, img_dir)
+dataset = gz2Dataset(csv_filename, img_dir, augmentation_transform)
 
 fig = plt.figure()
 
 for i in range(len(dataset)):
     sample = dataset[i]
 
-    print(i, sample['image'].shape)
+    print(sample)
 
     ax = plt.subplot(4, 4, i + 1)
     plt.tight_layout()
