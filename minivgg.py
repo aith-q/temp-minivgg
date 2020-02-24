@@ -10,16 +10,21 @@ nanocfg = [8, 8, 'M', 4, 'M', 4, 'M']
 
 class MiniVGG(nn.Module):
 
-    def __init__(self, cfg=minicfg, init_weights=True):
+    def __init__(self, cfg=minicfg, class_count=2, init_weights=True):
         super(MiniVGG, self).__init__()
         self.features = make_layers(cfg)
+        self.classifier = nn.Sequential(
+            nn.Linear(128, class_count),
+            nn.Softmax(dim=1)
+        )
         if init_weights:
             self._initialize_weights()
 
     def forward(self, x):
         x = self.features(x)
-        s = nn.Softmax(dim=1)(x)
-        return torch.index_select(s, -1, torch.tensor([0]))
+        x = self.classifier(x)
+        # return torch.index_select(x, -1, torch.tensor([0]))
+        return x
 
     def _initialize_weights(self):
         for m in self.modules():
@@ -51,5 +56,4 @@ def make_layers(cfg, batch_norm=False):
             in_channels = v
     layers += [nn.Flatten()]
     layers += [nn.Linear(img_size*img_size * in_channels, 128), nn.ReLU(inplace=True)]
-    layers += [nn.Linear(128, 2)]
     return nn.Sequential(*layers)
